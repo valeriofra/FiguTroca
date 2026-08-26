@@ -1,5 +1,6 @@
 package com.figutroca.app.data
 
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
@@ -45,7 +46,7 @@ data class Sticker(
     /** Sticker identifier as printed in the album, e.g. "1", "23", "ARG 4", "FWC". */
     val code: String,
     /** Optional group/section label, e.g. team or country name. */
-    val group: String = "",
+    @ColumnInfo(name = "grp") val group: String = "",
     val count: Int = 0,
     /** Numeric key used to sort codes naturally (1, 2, 10 instead of 1, 10, 2). */
     val sortKey: Long = 0

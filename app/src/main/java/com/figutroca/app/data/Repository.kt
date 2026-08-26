@@ -1,6 +1,19 @@
 package com.figutroca.app.data
 
+import com.figutroca.app.util.ListParser
 import kotlinx.coroutines.flow.Flow
+
+/** What a pasted list represents, and how quantities map to owned copies. */
+enum class ImportMode {
+    /** Trade pile: quantity = spare copies, so total owned = quantity + 1. */
+    DUPLICATES,
+    /** Owned stickers: quantity = total copies owned. */
+    OWNED,
+    /** Missing stickers: creates the slots and sets them to 0. */
+    MISSING
+}
+
+data class ImportResult(val teams: Int, val stickers: Int, val copies: Int)
 
 /**
  * Single point of access to the database for the ViewModel.
@@ -70,6 +83,58 @@ class Repository(
             )
         }
         stickerDao.insertAll(stickers)
+    }
+
+    /**
+     * Imports a pasted collector list (see [ListParser]) into a collection.
+     * Every team referenced is expanded to its full 1..[Teams.PER_TEAM] set so
+     * the album stays complete and "Faltam" is accurate, then the listed
+     * stickers get their counts set according to [mode].
+     */
+    suspend fun importList(collectionId: Long, raw: String, mode: ImportMode): ImportResult {
+        val parsed = ListParser.parse(raw)
+        if (parsed.entries.isEmpty()) return ImportResult(0, 0, 0)
+
+        // 1) Ensure every referenced team has all of its numbered slots.
+        val slots = parsed.teams.flatMap { team ->
+            val name = Teams.name(team)
+            (1..Teams.PER_TEAM).map { n ->
+                Sticker(
+                    collectionId = collectionId,
+                    code = "$team $n",
+                    group = name,
+                    count = 0,
+                    sortKey = n.toLong()
+                )
+            }
+        }
+        stickerDao.insertAll(slots) // IGNORE keeps existing counts untouched
+
+        // 2) Apply counts for the listed stickers.
+        for (e in parsed.entries) {
+            val count = when (mode) {
+                ImportMode.DUPLICATES -> e.qty + 1
+                ImportMode.OWNED -> e.qty
+                ImportMode.MISSING -> 0
+            }
+            val existing = stickerDao.findByCode(collectionId, e.code)
+            if (existing != null) {
+                stickerDao.setCount(existing.id, count)
+            } else {
+                stickerDao.insertAll(
+                    listOf(
+                        Sticker(
+                            collectionId = collectionId,
+                            code = e.code,
+                            group = Teams.name(e.team),
+                            count = count,
+                            sortKey = e.number.toLong()
+                        )
+                    )
+                )
+            }
+        }
+        return ImportResult(parsed.teams.size, parsed.stickerCount, parsed.copies)
     }
 
     suspend fun setCount(sticker: Sticker, count: Int) =

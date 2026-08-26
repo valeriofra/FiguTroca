@@ -60,8 +60,11 @@ interface StickerDao {
     @Query("DELETE FROM stickers WHERE id = :id")
     suspend fun delete(id: Long)
 
-    @Query("SELECT * FROM stickers WHERE collectionId = :collectionId ORDER BY sortKey, code")
+    @Query("SELECT * FROM stickers WHERE collectionId = :collectionId ORDER BY grp, sortKey, code")
     fun observeForCollection(collectionId: Long): Flow<List<Sticker>>
+
+    @Query("SELECT * FROM stickers WHERE collectionId = :collectionId AND code = :code LIMIT 1")
+    suspend fun findByCode(collectionId: Long, code: String): Sticker?
 
     @Query("UPDATE stickers SET count = :count WHERE id = :id")
     suspend fun setCount(id: Long, count: Int)

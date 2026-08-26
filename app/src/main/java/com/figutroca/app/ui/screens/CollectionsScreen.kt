@@ -229,7 +229,7 @@ private fun NewCollectionDialog(
     onConfirm: (name: String, numberedTotal: Int) -> Unit
 ) {
     var name by remember { mutableStateOf(defaultName) }
-    var total by remember { mutableStateOf("670") }
+    var total by remember { mutableStateOf("0") }
 
     AlertDialog(
         onDismissRequest = onDismiss,

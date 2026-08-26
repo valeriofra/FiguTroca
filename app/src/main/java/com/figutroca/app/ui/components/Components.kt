@@ -71,16 +71,29 @@ fun StickerCell(
             .combinedClickable(onClick = onTap, onLongClick = onLongPress),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = sticker.code,
-            color = content,
-            fontWeight = FontWeight.Bold,
-            fontSize = 15.sp,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.padding(horizontal = 4.dp)
-        )
+        // Codes like "BRA 13" render as a small team prefix over a big number.
+        val parts = sticker.code.split(' ', limit = 2)
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (parts.size == 2) {
+                Text(
+                    text = parts[0],
+                    color = content.copy(alpha = 0.85f),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 9.sp,
+                    maxLines = 1
+                )
+            }
+            Text(
+                text = if (parts.size == 2) parts[1] else sticker.code,
+                color = content,
+                fontWeight = FontWeight.Bold,
+                fontSize = if (parts.size == 2) 17.sp else 15.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
+        }
         if (hasDupes) {
             Box(
                 modifier = Modifier

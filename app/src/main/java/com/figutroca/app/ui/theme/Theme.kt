@@ -17,43 +17,49 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val LightColors = lightColorScheme(
-    primary = Green40,
+    primary = Blue40,
     onPrimary = Color.White,
-    primaryContainer = Green90,
-    onPrimaryContainer = Green10,
-    secondary = Gold40,
+    primaryContainer = Blue90,
+    onPrimaryContainer = Blue10,
+    secondary = Red40,
     onSecondary = Color.White,
-    secondaryContainer = Gold90,
-    onSecondaryContainer = Color(0xFF261A00),
-    background = Sand99,
-    onBackground = Sand10,
-    surface = Sand99,
-    onSurface = Sand10,
-    surfaceVariant = Sand90,
-    onSurfaceVariant = Sand20,
+    secondaryContainer = Red90,
+    onSecondaryContainer = Color(0xFF40000A),
+    tertiary = SunsetOrange,
+    onTertiary = Color.White,
+    background = Cool99,
+    onBackground = Cool10,
+    surface = Cool99,
+    onSurface = Cool10,
+    surfaceVariant = Cool90,
+    onSurfaceVariant = Cool20,
 )
 
 private val DarkColors = darkColorScheme(
-    primary = Green80,
-    onPrimary = Green20,
-    primaryContainer = Green30,
-    onPrimaryContainer = Green90,
-    secondary = Gold80,
-    onSecondary = Color(0xFF3F2E00),
-    secondaryContainer = Gold40,
-    onSecondaryContainer = Gold90,
-    background = Sand10,
-    onBackground = Sand90,
-    surface = Sand10,
-    onSurface = Sand90,
-    surfaceVariant = Sand20,
-    onSurfaceVariant = Sand90,
+    primary = Blue80,
+    onPrimary = Blue20,
+    primaryContainer = Blue30,
+    onPrimaryContainer = Blue90,
+    secondary = Red80,
+    onSecondary = Color(0xFF5F0016),
+    secondaryContainer = Red40,
+    onSecondaryContainer = Red90,
+    tertiary = SunsetOrange,
+    onTertiary = Color(0xFF3A1700),
+    background = Cool10,
+    onBackground = Cool90,
+    surface = Cool10,
+    onSurface = Cool90,
+    surfaceVariant = Cool20,
+    onSurfaceVariant = Cool90,
 )
 
 @Composable
 fun FiguTrocaTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    // Off by default so the World Cup 2026 brand palette always shows,
+    // instead of the device's Material You wallpaper colors.
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit
 ) {
     val context = LocalContext.current

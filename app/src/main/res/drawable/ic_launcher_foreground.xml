@@ -9,11 +9,11 @@
             android:fillColor="#FFFFFF"
             android:pathData="M54,32 A22,22 0 1,0 54.01,32 Z" />
         <path
-            android:fillColor="#0A6E42"
+            android:fillColor="#0067B1"
             android:pathData="M54,40 l6.5,4.7 -2.5,7.6 h-8 l-2.5,-7.6 Z" />
         <path
-            android:fillColor="#0A6E42"
-            android:strokeColor="#0A6E42"
+            android:fillColor="#0067B1"
+            android:strokeColor="#0067B1"
             android:strokeWidth="1.6"
             android:pathData="M54,32 L54,40 M65.4,40 L60.5,44.7 M42.6,40 L47.5,44.7 M49.5,64 L47.5,52.3 M58.5,64 L60.5,52.3" />
     </group>

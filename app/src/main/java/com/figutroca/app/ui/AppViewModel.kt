@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.figutroca.app.data.AppDatabase
 import com.figutroca.app.data.Collection
 import com.figutroca.app.data.CollectionStats
+import com.figutroca.app.data.ImportMode
+import com.figutroca.app.data.ImportResult
 import com.figutroca.app.data.Repository
 import com.figutroca.app.data.Sticker
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -110,6 +112,13 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         val id = albumState.value.activeCollection?.id ?: return@launch
         repo.addCodes(id, raw, group)
     }
+
+    fun importList(raw: String, mode: ImportMode, onDone: (ImportResult) -> Unit = {}) =
+        viewModelScope.launch {
+            val id = albumState.value.activeCollection?.id ?: return@launch
+            val result = repo.importList(id, raw, mode)
+            onDone(result)
+        }
 
     fun createCollection(name: String, numberedTotal: Int) = viewModelScope.launch {
         repo.createCollection(name, numberedTotal)
