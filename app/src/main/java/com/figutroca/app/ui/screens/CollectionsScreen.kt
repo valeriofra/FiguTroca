@@ -17,6 +17,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Save
@@ -65,6 +66,7 @@ fun CollectionsScreen(vm: AppViewModel, contentPadding: PaddingValues) {
 
     var showNew by remember { mutableStateOf(false) }
     var showArchive by remember { mutableStateOf(false) }
+    var showRename by remember { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<android.net.Uri?>(null) }
 
     // Storage Access Framework: the user picks exactly where to save / restore.
@@ -99,7 +101,8 @@ fun CollectionsScreen(vm: AppViewModel, contentPadding: PaddingValues) {
                     name = active.name,
                     owned = album.stats.owned,
                     total = album.stats.total,
-                    percent = (album.stats.completion * 100).toInt()
+                    percent = (album.stats.completion * 100).toInt(),
+                    onRename = { showRename = true }
                 )
             }
         }
@@ -172,6 +175,17 @@ fun CollectionsScreen(vm: AppViewModel, contentPadding: PaddingValues) {
         )
     }
 
+    if (showRename && active != null) {
+        RenameDialog(
+            current = active.name,
+            onDismiss = { showRename = false },
+            onConfirm = { newName ->
+                vm.renameCollection(active, newName)
+                showRename = false
+            }
+        )
+    }
+
     pendingRestoreUri?.let { uri ->
         AlertDialog(
             onDismissRequest = { pendingRestoreUri = null },
@@ -222,21 +236,34 @@ private fun BackupCard(onExport: () -> Unit, onImport: () -> Unit) {
 }
 
 @Composable
-private fun ActiveCard(name: String, owned: Int, total: Int, percent: Int) {
+private fun ActiveCard(name: String, owned: Int, total: Int, percent: Int, onRename: () -> Unit) {
     Card(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer
         )
     ) {
         Column(Modifier.padding(20.dp)) {
-            AssistChip(
-                onClick = {},
-                enabled = false,
-                leadingIcon = {
-                    Icon(Icons.Rounded.CheckCircle, contentDescription = null)
-                },
-                label = { Text("Ativa") }
-            )
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                AssistChip(
+                    onClick = {},
+                    enabled = false,
+                    leadingIcon = {
+                        Icon(Icons.Rounded.CheckCircle, contentDescription = null)
+                    },
+                    label = { Text("Ativa") }
+                )
+                IconButton(onClick = onRename) {
+                    Icon(
+                        Icons.Rounded.Edit,
+                        contentDescription = "Renomear coleção",
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer
+                    )
+                }
+            }
             Text(
                 name,
                 style = MaterialTheme.typography.titleLarge,
@@ -341,6 +368,30 @@ private fun NewCollectionDialog(
         },
         confirmButton = {
             Button(onClick = { onConfirm(name, total.toIntOrNull() ?: 0) }) { Text(confirmLabel) }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+@Composable
+private fun RenameDialog(current: String, onDismiss: () -> Unit, onConfirm: (String) -> Unit) {
+    var name by remember { mutableStateOf(current) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Renomear coleção") },
+        text = {
+            OutlinedTextField(
+                value = name,
+                onValueChange = { name = it },
+                label = { Text("Nome da coleção") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            Button(onClick = { onConfirm(name) }, enabled = name.isNotBlank()) { Text("Salvar") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar") }

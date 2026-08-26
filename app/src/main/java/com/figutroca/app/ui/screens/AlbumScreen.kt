@@ -24,15 +24,20 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.figutroca.app.data.Sticker
 import com.figutroca.app.ui.AppViewModel
 import com.figutroca.app.ui.StickerFilter
 import com.figutroca.app.ui.components.EmptyState
 import com.figutroca.app.ui.components.StatPill
 import com.figutroca.app.ui.components.StickerCell
+import com.figutroca.app.ui.components.StickerEditDialog
 import com.figutroca.app.ui.theme.DuplicateAmber
 import com.figutroca.app.ui.theme.MissingGray
 import com.figutroca.app.ui.theme.OwnedGreen
@@ -44,6 +49,7 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
     val filter by vm.filter.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
     val stats = album.stats
+    var editing by remember { mutableStateOf<Sticker?>(null) }
 
     if (album.activeCollection != null && album.stickers.isEmpty()) {
         EmptyState(
@@ -98,7 +104,7 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
                 )
                 FilterRow(selected = filter, onSelect = vm::setFilter)
                 Text(
-                    "Toque para adicionar · segure para remover",
+                    "Toque para adicionar · segure para editar",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -109,7 +115,7 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
             StickerCell(
                 sticker = sticker,
                 onTap = { vm.increment(sticker) },
-                onLongPress = { vm.decrement(sticker) }
+                onLongPress = { editing = sticker }
             )
         }
 
@@ -123,6 +129,15 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
                 )
             }
         }
+    }
+
+    editing?.let { s ->
+        StickerEditDialog(
+            sticker = s,
+            onSetCount = { vm.setCount(s, it) },
+            onDelete = { vm.deleteSticker(s) },
+            onDismiss = { editing = null }
+        )
     }
 }
 
