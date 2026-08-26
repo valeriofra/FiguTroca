@@ -32,6 +32,12 @@ interface CollectionDao {
     @Query("SELECT * FROM collections ORDER BY isActive DESC, createdAt DESC")
     fun observeAll(): Flow<List<Collection>>
 
+    @Query("SELECT * FROM collections ORDER BY createdAt")
+    suspend fun getAllOnce(): List<Collection>
+
+    @Query("DELETE FROM collections")
+    suspend fun deleteAll()
+
     @Query("SELECT * FROM collections WHERE isActive = 1 LIMIT 1")
     fun observeActive(): Flow<Collection?>
 
@@ -65,6 +71,9 @@ interface StickerDao {
 
     @Query("SELECT * FROM stickers WHERE collectionId = :collectionId AND code = :code LIMIT 1")
     suspend fun findByCode(collectionId: Long, code: String): Sticker?
+
+    @Query("SELECT * FROM stickers WHERE collectionId = :collectionId")
+    suspend fun getForCollectionOnce(collectionId: Long): List<Sticker>
 
     @Query("UPDATE stickers SET count = :count WHERE id = :id")
     suspend fun setCount(id: Long, count: Int)

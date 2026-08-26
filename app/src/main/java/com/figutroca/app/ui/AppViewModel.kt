@@ -1,6 +1,7 @@
 package com.figutroca.app.ui
 
 import android.app.Application
+import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.figutroca.app.data.AppDatabase
@@ -133,4 +134,31 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
     fun deleteCollection(c: Collection) = viewModelScope.launch { repo.deleteCollection(c) }
     fun renameCollection(c: Collection, name: String) =
         viewModelScope.launch { repo.renameCollection(c, name) }
+
+    // ---- Backup ----------------------------------------------------------
+
+    fun exportBackup(uri: Uri, onResult: (Boolean) -> Unit) = viewModelScope.launch {
+        val ok = try {
+            val json = repo.exportToJson()
+            getApplication<Application>().contentResolver.openOutputStream(uri)?.use { out ->
+                out.write(json.toByteArray(Charsets.UTF_8))
+            } ?: return@launch onResult(false)
+            true
+        } catch (e: Exception) {
+            false
+        }
+        onResult(ok)
+    }
+
+    fun importBackup(uri: Uri, onResult: (Boolean) -> Unit) = viewModelScope.launch {
+        val ok = try {
+            val json = getApplication<Application>().contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                ?.toString(Charsets.UTF_8) ?: return@launch onResult(false)
+            repo.importFromJson(json)
+            true
+        } catch (e: Exception) {
+            false
+        }
+        onResult(ok)
+    }
 }

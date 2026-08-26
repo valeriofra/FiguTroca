@@ -2,6 +2,8 @@ package com.figutroca.app.data
 
 import com.figutroca.app.util.ListParser
 import kotlinx.coroutines.flow.Flow
+import org.json.JSONArray
+import org.json.JSONObject
 
 /** What a pasted list represents, and how quantities map to owned copies. */
 enum class ImportMode {
@@ -212,5 +214,79 @@ class Repository(
 
     suspend fun deleteCollection(collection: Collection) {
         collectionDao.delete(collection.id)
+    }
+
+    // ---- Backup (export / restore) ---------------------------------------
+
+    /** Serializes every collection and its stickers to a portable JSON string. */
+    suspend fun exportToJson(): String {
+        val root = JSONObject()
+        root.put("app", "FiguTroca")
+        root.put("version", 1)
+        root.put("exportedAt", System.currentTimeMillis())
+        val collections = JSONArray()
+        for (c in collectionDao.getAllOnce()) {
+            val co = JSONObject()
+            co.put("name", c.name)
+            co.put("createdAt", c.createdAt)
+            co.put("archivedAt", c.archivedAt ?: JSONObject.NULL)
+            co.put("isActive", c.isActive)
+            val stickers = JSONArray()
+            for (s in stickerDao.getForCollectionOnce(c.id)) {
+                stickers.put(
+                    JSONObject()
+                        .put("code", s.code)
+                        .put("grp", s.group)
+                        .put("count", s.count)
+                        .put("sortKey", s.sortKey)
+                )
+            }
+            co.put("stickers", stickers)
+            collections.put(co)
+        }
+        root.put("collections", collections)
+        return root.toString(2)
+    }
+
+    /** Replaces all data with the contents of a backup produced by [exportToJson]. */
+    suspend fun importFromJson(json: String): Int {
+        val root = JSONObject(json)
+        val collections = root.getJSONArray("collections")
+
+        collectionDao.deleteAll() // cascades stickers via foreign key
+
+        var restored = 0
+        for (i in 0 until collections.length()) {
+            val co = collections.getJSONObject(i)
+            val id = collectionDao.insert(
+                Collection(
+                    name = co.optString("name", "Coleção"),
+                    createdAt = co.optLong("createdAt", System.currentTimeMillis()),
+                    archivedAt = if (co.isNull("archivedAt")) null else co.optLong("archivedAt"),
+                    isActive = co.optBoolean("isActive", false)
+                )
+            )
+            val stickers = co.optJSONArray("stickers") ?: JSONArray()
+            val list = ArrayList<Sticker>(stickers.length())
+            for (j in 0 until stickers.length()) {
+                val so = stickers.getJSONObject(j)
+                list.add(
+                    Sticker(
+                        collectionId = id,
+                        code = so.getString("code"),
+                        group = so.optString("grp", ""),
+                        count = so.optInt("count", 0),
+                        sortKey = so.optLong("sortKey", 0)
+                    )
+                )
+            }
+            stickerDao.insertAll(list)
+            restored += list.size
+        }
+        // Guarantee exactly one active collection after a restore.
+        if (collectionDao.getActive() == null) {
+            collectionDao.getAllOnce().firstOrNull()?.let { collectionDao.markActive(it.id) }
+        }
+        return restored
     }
 }

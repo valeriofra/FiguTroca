@@ -20,9 +20,25 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    signingConfigs {
+        // Fixed key committed to the repo so every CI build shares one signature,
+        // letting updates install over the top without uninstalling. This is a
+        // personal, offline app — the key is not a production secret.
+        create("shared") {
+            storeFile = file("figutroca.keystore")
+            storePassword = "figutroca"
+            keyAlias = "figutroca"
+            keyPassword = "figutroca"
+        }
+    }
+
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("shared")
+        }
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("shared")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

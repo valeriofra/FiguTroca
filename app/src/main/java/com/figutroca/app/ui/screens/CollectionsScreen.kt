@@ -1,5 +1,8 @@
 package com.figutroca.app.ui.screens
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -15,6 +18,8 @@ import androidx.compose.material.icons.rounded.Archive
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Inventory2
+import androidx.compose.material.icons.rounded.Restore
+import androidx.compose.material.icons.rounded.Save
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -23,6 +28,8 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -34,6 +41,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -46,15 +54,34 @@ import java.util.Date
 import java.util.Locale
 
 private val dateFmt = SimpleDateFormat("dd/MM/yyyy", Locale.getDefault())
+private val fileDateFmt = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
 @Composable
 fun CollectionsScreen(vm: AppViewModel, contentPadding: PaddingValues) {
     val album by vm.albumState.collectAsStateWithLifecycle()
     val collections by vm.collections.collectAsStateWithLifecycle()
     val active = album.activeCollection
+    val context = LocalContext.current
 
     var showNew by remember { mutableStateOf(false) }
     var showArchive by remember { mutableStateOf(false) }
+    var pendingRestoreUri by remember { mutableStateOf<android.net.Uri?>(null) }
+
+    // Storage Access Framework: the user picks exactly where to save / restore.
+    val exportLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.CreateDocument("application/json")
+    ) { uri ->
+        if (uri != null) vm.exportBackup(uri) { ok ->
+            Toast.makeText(
+                context,
+                if (ok) "Backup salvo" else "Falha ao salvar backup",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+    val importLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.OpenDocument()
+    ) { uri -> if (uri != null) pendingRestoreUri = uri }
 
     LazyColumn(
         contentPadding = PaddingValues(
@@ -90,6 +117,13 @@ fun CollectionsScreen(vm: AppViewModel, contentPadding: PaddingValues) {
                     }
                 }
             }
+        }
+
+        item {
+            BackupCard(
+                onExport = { exportLauncher.launch("figutroca-backup-${fileDateFmt.format(Date())}.json") },
+                onImport = { importLauncher.launch(arrayOf("application/json", "text/*", "*/*")) }
+            )
         }
 
         val archived = collections.filter { !it.isActive }
@@ -136,6 +170,54 @@ fun CollectionsScreen(vm: AppViewModel, contentPadding: PaddingValues) {
                 showArchive = false
             }
         )
+    }
+
+    pendingRestoreUri?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { pendingRestoreUri = null },
+            title = { Text("Restaurar backup?") },
+            text = { Text("Isto substitui TODAS as coleções atuais pelo conteúdo do arquivo escolhido. Não pode ser desfeito.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    vm.importBackup(uri) { ok ->
+                        Toast.makeText(
+                            context,
+                            if (ok) "Backup restaurado" else "Arquivo inválido",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                    pendingRestoreUri = null
+                }) { Text("Restaurar") }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingRestoreUri = null }) { Text("Cancelar") }
+            }
+        )
+    }
+}
+
+@Composable
+private fun BackupCard(onExport: () -> Unit, onImport: () -> Unit) {
+    Card {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("Backup", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Salve sua coleção onde quiser (celular, cartão SD, Google Drive) e restaure quando precisar.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            HorizontalDivider()
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Button(onClick = onExport, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Rounded.Save, contentDescription = null)
+                    Text("  Exportar")
+                }
+                FilledTonalButton(onClick = onImport, modifier = Modifier.weight(1f)) {
+                    Icon(Icons.Rounded.Restore, contentDescription = null)
+                    Text("  Restaurar")
+                }
+            }
+        }
     }
 }
 
