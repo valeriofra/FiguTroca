@@ -1,5 +1,8 @@
 package com.figutroca.app.ui.screens
 
+import android.widget.Toast
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -11,8 +14,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
@@ -23,47 +30,67 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.figutroca.app.ui.AppViewModel
 import com.figutroca.app.ui.components.EmptyState
-import com.figutroca.app.ui.components.StatPill
 import com.figutroca.app.ui.components.TeamCard
 import com.figutroca.app.ui.components.TeamSheet
 import com.figutroca.app.ui.components.groupTeams
 import com.figutroca.app.ui.theme.DuplicateAmber
 import com.figutroca.app.ui.theme.MissingGray
 import com.figutroca.app.ui.theme.OwnedGreen
+import com.figutroca.app.util.ShareLists
+
+private enum class Section { ALBUM, FALTAM, REPETIDAS }
 
 @Composable
 fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
     val album by vm.albumState.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
     val stats = album.stats
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    var section by remember { mutableStateOf(Section.ALBUM) }
     var openTeamCode by remember { mutableStateOf<String?>(null) }
 
     if (album.activeCollection == null) {
         EmptyState(
-            title = "Nenhuma coleção ativa",
-            subtitle = "Vá até a aba Coleções para criar sua coleção da Copa.",
-            modifier = Modifier.padding(contentPadding)
+            "Nenhuma coleção ativa",
+            "Vá até a aba Coleções para criar sua coleção da Copa.",
+            Modifier.padding(contentPadding)
         )
         return
     }
     if (album.stickers.isEmpty()) {
         EmptyState(
-            title = "Álbum vazio",
-            subtitle = "Use o ícone de colar (topo) para importar sua lista, ou + para adicionar.",
-            modifier = Modifier.padding(contentPadding)
+            "Álbum vazio",
+            "Use o ícone de colar (topo) para importar sua lista, ou + para adicionar.",
+            Modifier.padding(contentPadding)
         )
         return
     }
 
+    val name = album.activeCollection?.name ?: "Coleção"
     val allTeams = remember(album.stickers) { groupTeams(album.stickers) }
-    val teams = allTeams.filter {
-        query.isBlank() || it.name.contains(query, true) || it.code.contains(query, true)
+
+    val sectionTeams = when (section) {
+        Section.ALBUM -> allTeams
+        Section.FALTAM -> allTeams.filter { it.missing > 0 }
+        Section.REPETIDAS -> allTeams.filter { it.duplicates > 0 }
+    }
+    val teams = sectionTeams.filter {
+        query.isBlank() || it.name.contains(query, true) || it.code.contains(query, true) ||
+            com.figutroca.app.data.Teams.enName(it.code).contains(query, true)
     }
     val openGroup = openTeamCode?.let { code -> allTeams.find { it.code == code } }
 
@@ -80,16 +107,14 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                ProgressCard(
-                    name = album.activeCollection?.name ?: "",
-                    owned = stats.owned,
-                    total = stats.total,
-                    completion = stats.completion
-                )
+                Text(name, style = MaterialTheme.typography.headlineMedium)
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    StatPill("${stats.owned}", "Tenho", OwnedGreen, Modifier.weight(1f))
-                    StatPill("${stats.missing}", "Faltam", MissingGray, Modifier.weight(1f))
-                    StatPill("${stats.duplicates}", "Repetidas", DuplicateAmber, Modifier.weight(1f))
+                    SectionPill("${stats.owned}", "Tenho", OwnedGreen,
+                        section == Section.ALBUM, Modifier.weight(1f)) { section = Section.ALBUM }
+                    SectionPill("${stats.missing}", "Faltam", MissingGray,
+                        section == Section.FALTAM, Modifier.weight(1f)) { section = Section.FALTAM }
+                    SectionPill("${stats.duplicates}", "Repetidas", DuplicateAmber,
+                        section == Section.REPETIDAS, Modifier.weight(1f)) { section = Section.REPETIDAS }
                 }
                 OutlinedTextField(
                     value = query,
@@ -99,6 +124,31 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (section != Section.ALBUM) {
+                    val listText = if (section == Section.REPETIDAS)
+                        ShareLists.duplicates(name, album.stickers)
+                    else ShareLists.missing(name, album.stickers)
+                    val label = if (section == Section.REPETIDAS) "Repetidas" else "Faltam"
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        FilledTonalButton(
+                            onClick = {
+                                clipboard.setText(AnnotatedString(listText))
+                                Toast.makeText(context, "Lista copiada", Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Rounded.ContentCopy, contentDescription = null)
+                            Text("  Copiar")
+                        }
+                        FilledTonalButton(
+                            onClick = { ShareLists.share(context, listText, "$name — $label") },
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(Icons.Rounded.Share, contentDescription = null)
+                            Text("  Enviar")
+                        }
+                    }
+                }
                 Text(
                     "Toque numa seleção para abrir as figurinhas",
                     style = MaterialTheme.typography.bodyMedium,
@@ -108,13 +158,23 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
         }
 
         items(teams, key = { it.code }) { group ->
-            TeamCard(group = group, onClick = { openTeamCode = group.code })
+            val subtitle = when (section) {
+                Section.ALBUM -> "${group.owned}/${group.total}"
+                Section.FALTAM -> "faltam ${group.missing}"
+                Section.REPETIDAS -> "${group.duplicates} repetidas"
+            }
+            TeamCard(
+                group = group,
+                subtitle = subtitle,
+                badge = if (section == Section.REPETIDAS) group.duplicates else null,
+                onClick = { openTeamCode = group.code }
+            )
         }
 
         if (teams.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    "Nenhuma seleção encontrada.",
+                    "Nenhuma seleção nesta seção.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 24.dp)
@@ -124,8 +184,21 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
     }
 
     openGroup?.let { group ->
+        val shownStickers = when (section) {
+            Section.ALBUM -> group.stickers
+            Section.FALTAM -> group.stickers.filter { it.missing }
+            Section.REPETIDAS -> group.stickers.filter { it.duplicates > 0 }
+        }
+        val subtitle = when (section) {
+            Section.ALBUM -> "${group.owned}/${group.total} · segure para ajustar"
+            Section.FALTAM -> "Faltam ${group.missing} · segure para ajustar"
+            Section.REPETIDAS -> "${group.duplicates} repetidas · segure para ajustar"
+        }
         TeamSheet(
             group = group,
+            subtitle = subtitle,
+            stickers = shownStickers,
+            badgeOf = { s -> if (section == Section.REPETIDAS) s.duplicates else null },
             onInc = { vm.increment(it) },
             onDec = { vm.decrement(it) },
             onDismiss = { openTeamCode = null }
@@ -134,30 +207,26 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
 }
 
 @Composable
-private fun ProgressCard(name: String, owned: Int, total: Int, completion: Float) {
-    Column(Modifier.fillMaxWidth().padding(top = 4.dp)) {
-        Text(name, style = MaterialTheme.typography.headlineMedium)
-        Row(
-            Modifier.fillMaxWidth().padding(top = 4.dp),
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Text(
-                "$owned de $total figurinhas",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Text(
-                "${(completion * 100).toInt()}%",
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-        }
-        LinearProgressIndicator(
-            progress = { completion },
-            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-            trackColor = MaterialTheme.colorScheme.surfaceVariant,
-            gapSize = 0.dp,
-            drawStopIndicator = {}
-        )
+private fun SectionPill(
+    value: String,
+    label: String,
+    color: Color,
+    selected: Boolean,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val bg = if (selected) color else color.copy(alpha = 0.14f)
+    val valueColor = if (selected) Color.White else color
+    val labelColor = if (selected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(18.dp))
+            .background(bg)
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(value, color = valueColor, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+        Text(label, color = labelColor, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
     }
 }

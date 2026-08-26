@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.padding
 import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Inventory2
-import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -32,13 +30,9 @@ import com.figutroca.app.ui.components.AddStickerSheet
 import com.figutroca.app.ui.components.ImportSheet
 import com.figutroca.app.ui.screens.AlbumScreen
 import com.figutroca.app.ui.screens.CollectionsScreen
-import com.figutroca.app.ui.screens.ListKind
-import com.figutroca.app.ui.screens.ListsScreen
 
 private enum class Tab(val label: String, val icon: ImageVector) {
     ALBUM("Álbum", Icons.Rounded.GridView),
-    DUPLICATES("Repetidas", Icons.Rounded.SwapHoriz),
-    MISSING("Faltam", Icons.Rounded.Checklist),
     COLLECTIONS("Coleções", Icons.Rounded.Inventory2)
 }
 
@@ -86,8 +80,6 @@ fun FiguTrocaApp(vm: AppViewModel) {
         Crossfade(targetState = tab, label = "tab", modifier = Modifier.fillMaxSize()) { current ->
             when (current) {
                 Tab.ALBUM -> AlbumScreen(vm, padding)
-                Tab.DUPLICATES -> ListsScreen(vm, ListKind.DUPLICATES, padding)
-                Tab.MISSING -> ListsScreen(vm, ListKind.MISSING, padding)
                 Tab.COLLECTIONS -> CollectionsScreen(vm, padding)
             }
         }
