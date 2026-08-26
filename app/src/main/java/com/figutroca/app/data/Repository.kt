@@ -31,10 +31,15 @@ class Repository(
      * seeds it from the owner's real duplicate/missing lists (see [SeedData]).
      */
     suspend fun ensureActiveCollection() {
-        if (collectionDao.getActive() != null) return
-        collectionDao.clearActive()
-        val id = collectionDao.insert(Collection(name = "Copa do Mundo 2026", isActive = true))
-        seedCollection(id)
+        val active = collectionDao.getActive()
+        if (active == null) {
+            collectionDao.clearActive()
+            val id = collectionDao.insert(Collection(name = "Copa do Mundo 2026", isActive = true))
+            seedCollection(id)
+        } else if (stickerDao.countFor(active.id) == 0) {
+            // Fill an empty active collection left over from an earlier install.
+            seedCollection(active.id)
+        }
     }
 
     /**

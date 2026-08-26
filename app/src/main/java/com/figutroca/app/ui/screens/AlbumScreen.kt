@@ -13,14 +13,10 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Search
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.SegmentedButton
-import androidx.compose.material3.SegmentedButtonDefaults
-import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -31,13 +27,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.figutroca.app.data.Sticker
 import com.figutroca.app.ui.AppViewModel
-import com.figutroca.app.ui.StickerFilter
 import com.figutroca.app.ui.components.EmptyState
 import com.figutroca.app.ui.components.StatPill
-import com.figutroca.app.ui.components.StickerCell
-import com.figutroca.app.ui.components.StickerEditDialog
+import com.figutroca.app.ui.components.TeamCard
+import com.figutroca.app.ui.components.TeamSheet
+import com.figutroca.app.ui.components.groupTeams
 import com.figutroca.app.ui.theme.DuplicateAmber
 import com.figutroca.app.ui.theme.MissingGray
 import com.figutroca.app.ui.theme.OwnedGreen
@@ -45,42 +40,44 @@ import com.figutroca.app.ui.theme.OwnedGreen
 @Composable
 fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
     val album by vm.albumState.collectAsStateWithLifecycle()
-    val stickers by vm.visibleStickers.collectAsStateWithLifecycle()
-    val filter by vm.filter.collectAsStateWithLifecycle()
     val query by vm.query.collectAsStateWithLifecycle()
     val stats = album.stats
-    var editing by remember { mutableStateOf<Sticker?>(null) }
+    var openTeamCode by remember { mutableStateOf<String?>(null) }
 
-    if (album.activeCollection != null && album.stickers.isEmpty()) {
-        EmptyState(
-            title = "Álbum vazio",
-            subtitle = "Toque em + para adicionar as figurinhas do álbum " +
-                "(ex.: intervalo de 1 a 670).",
-            modifier = Modifier.padding(contentPadding)
-        )
-        return
-    }
     if (album.activeCollection == null) {
         EmptyState(
             title = "Nenhuma coleção ativa",
-            subtitle = "Vá até a aba Coleções para criar sua primeira coleção da Copa.",
+            subtitle = "Vá até a aba Coleções para criar sua coleção da Copa.",
+            modifier = Modifier.padding(contentPadding)
+        )
+        return
+    }
+    if (album.stickers.isEmpty()) {
+        EmptyState(
+            title = "Álbum vazio",
+            subtitle = "Use o ícone de colar (topo) para importar sua lista, ou + para adicionar.",
             modifier = Modifier.padding(contentPadding)
         )
         return
     }
 
+    val allTeams = remember(album.stickers) { groupTeams(album.stickers) }
+    val teams = allTeams.filter {
+        query.isBlank() || it.name.contains(query, true) || it.code.contains(query, true)
+    }
+    val openGroup = openTeamCode?.let { code -> allTeams.find { it.code == code } }
+
     LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 64.dp),
+        columns = GridCells.Fixed(2),
         contentPadding = PaddingValues(
             start = 16.dp, end = 16.dp,
             top = contentPadding.calculateTopPadding() + 8.dp,
             bottom = contentPadding.calculateBottomPadding() + 24.dp
         ),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        // Header spans the full width of the grid.
         item(span = { GridItemSpan(maxLineSpan) }) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 ProgressCard(
@@ -98,31 +95,26 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
                     value = query,
                     onValueChange = vm::setQuery,
                     leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                    placeholder = { Text("Buscar figurinha ou seleção") },
+                    placeholder = { Text("Buscar seleção") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-                FilterRow(selected = filter, onSelect = vm::setFilter)
                 Text(
-                    "Toque para adicionar · segure para editar",
+                    "Toque numa seleção para abrir as figurinhas",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
 
-        items(stickers, key = { it.id }) { sticker ->
-            StickerCell(
-                sticker = sticker,
-                onTap = { vm.increment(sticker) },
-                onLongPress = { editing = sticker }
-            )
+        items(teams, key = { it.code }) { group ->
+            TeamCard(group = group, onClick = { openTeamCode = group.code })
         }
 
-        if (stickers.isEmpty()) {
+        if (teams.isEmpty()) {
             item(span = { GridItemSpan(maxLineSpan) }) {
                 Text(
-                    "Nenhuma figurinha neste filtro.",
+                    "Nenhuma seleção encontrada.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 24.dp)
@@ -131,23 +123,19 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
         }
     }
 
-    editing?.let { s ->
-        StickerEditDialog(
-            sticker = s,
-            onSetCount = { vm.setCount(s, it) },
-            onDelete = { vm.deleteSticker(s) },
-            onDismiss = { editing = null }
+    openGroup?.let { group ->
+        TeamSheet(
+            group = group,
+            onInc = { vm.increment(it) },
+            onDec = { vm.decrement(it) },
+            onDismiss = { openTeamCode = null }
         )
     }
 }
 
 @Composable
 private fun ProgressCard(name: String, owned: Int, total: Int, completion: Float) {
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .padding(top = 4.dp)
-    ) {
+    Column(Modifier.fillMaxWidth().padding(top = 4.dp)) {
         Text(name, style = MaterialTheme.typography.headlineMedium)
         Row(
             Modifier.fillMaxWidth().padding(top = 4.dp),
@@ -166,28 +154,10 @@ private fun ProgressCard(name: String, owned: Int, total: Int, completion: Float
         }
         LinearProgressIndicator(
             progress = { completion },
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 8.dp),
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             trackColor = MaterialTheme.colorScheme.surfaceVariant,
             gapSize = 0.dp,
             drawStopIndicator = {}
         )
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun FilterRow(selected: StickerFilter, onSelect: (StickerFilter) -> Unit) {
-    val options = StickerFilter.entries
-    SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-        options.forEachIndexed { index, option ->
-            SegmentedButton(
-                selected = selected == option,
-                onClick = { onSelect(option) },
-                shape = SegmentedButtonDefaults.itemShape(index, options.size),
-                label = { Text(option.label, maxLines = 1) }
-            )
-        }
     }
 }

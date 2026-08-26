@@ -24,6 +24,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -35,6 +38,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.figutroca.app.data.Sticker
 import com.figutroca.app.ui.AppViewModel
 import com.figutroca.app.ui.components.EmptyState
+import com.figutroca.app.ui.components.TeamCard
+import com.figutroca.app.ui.components.TeamSheet
+import com.figutroca.app.ui.components.groupTeams
 import com.figutroca.app.util.ShareLists
 import android.widget.Toast
 
@@ -46,6 +52,11 @@ fun ListsScreen(vm: AppViewModel, kind: ListKind, contentPadding: PaddingValues)
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
     val name = album.activeCollection?.name ?: "Coleção"
+    var openTeamCode by remember { mutableStateOf<String?>(null) }
+    val allTeams = remember(album.stickers) { groupTeams(album.stickers) }
+    // Repetidas: show one card per team that has duplicates.
+    val dupTeams = allTeams.filter { it.duplicates > 0 }
+    val openGroup = openTeamCode?.let { code -> allTeams.find { it.code == code } }
 
     val items = when (kind) {
         ListKind.DUPLICATES -> album.stickers.filter { it.duplicates > 0 }
@@ -111,9 +122,34 @@ fun ListsScreen(vm: AppViewModel, kind: ListKind, contentPadding: PaddingValues)
             }
         }
 
-        items(items, key = { it.id }) { sticker ->
-            StickerRow(sticker, kind, vm)
+        if (kind == ListKind.DUPLICATES) {
+            // One card per team with duplicates; tap opens the sticker popup.
+            items(dupTeams.chunked(2), key = { it.first().code }) { rowTeams ->
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    rowTeams.forEach { group ->
+                        TeamCard(
+                            group = group,
+                            onClick = { openTeamCode = group.code },
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
+                    if (rowTeams.size == 1) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                }
+            }
+        } else {
+            items(items, key = { it.id }) { sticker ->
+                StickerRow(sticker, kind, vm)
+            }
         }
+    }
+
+    openGroup?.let { group ->
+        TeamSheet(
+            group = group,
+            onInc = { vm.increment(it) },
+            onDec = { vm.decrement(it) },
+            onDismiss = { openTeamCode = null }
+        )
     }
 }
 
