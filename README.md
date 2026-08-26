@@ -45,7 +45,22 @@ Cada figurinha guarda quantas cópias você possui (`count`):
 - Arquitetura simples: `Repository` → `AppViewModel` → telas Compose
 - `minSdk 26`, `targetSdk 35`
 
-## Como compilar
+## Baixar o APK pronto (sem instalar nada)
+
+Toda vez que há um push, o **GitHub Actions** compila o APK automaticamente:
+
+1. Abra a aba **Actions** do repositório no GitHub.
+2. Clique na execução mais recente do workflow **Build APK**.
+3. Baixe o artefato **FiguTroca-debug-apk** (contém `app-debug.apk`).
+4. Transfira para o celular e instale (permita "fontes desconhecidas").
+
+Para gerar também uma **Release** com o APK anexado, crie uma tag:
+
+```bash
+git tag v1.0 && git push origin v1.0
+```
+
+## Como compilar localmente
 
 Requer o Android SDK instalado (via Android Studio ou command-line tools).
 
