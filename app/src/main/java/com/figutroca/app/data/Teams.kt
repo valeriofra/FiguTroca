@@ -14,8 +14,12 @@ object Teams {
     const val PER_TEAM = 20
 
     /** FIFA-style 3-letter code -> Portuguese name. Codes here match Panini's. */
+    /** Special (non-team) sections whose size is not the standard 20. */
+    val specials: Set<String> = setOf("FWC", "CC")
+
     private val names: Map<String, String> = mapOf(
         "FWC" to "FIFA World Cup",
+        "CC" to "Especiais (CC)",
         // Anfitriões
         "MEX" to "México", "USA" to "Estados Unidos", "CAN" to "Canadá",
         // Seleções (e possíveis participantes) na numeração do usuário

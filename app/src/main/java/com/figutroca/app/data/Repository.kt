@@ -24,11 +24,59 @@ class Repository(
     private val collectionDao: CollectionDao,
     private val stickerDao: StickerDao
 ) {
-    /** On first launch, creates a starter active collection so the app isn't empty. */
+    /**
+     * On first launch, creates the active "Copa do Mundo 2026" collection and
+     * seeds it from the owner's real duplicate/missing lists (see [SeedData]).
+     */
     suspend fun ensureActiveCollection() {
-        if (collectionDao.getActive() == null) {
-            createCollection("Copa do Mundo 2026", numberedTotal = 0)
+        if (collectionDao.getActive() != null) return
+        collectionDao.clearActive()
+        val id = collectionDao.insert(Collection(name = "Copa do Mundo 2026", isActive = true))
+        seedCollection(id)
+    }
+
+    /**
+     * Builds a complete album from [SeedData.REPETIDAS] + [SeedData.FALTAM].
+     * Per team: missing numbers -> 0, spares -> spares+1, everything else -> 1
+     * (owned single). Special sections (FWC, CC) only include listed numbers.
+     */
+    private suspend fun seedCollection(collectionId: Long) {
+        val rep = ListParser.parse(SeedData.REPETIDAS)
+        val miss = ListParser.parse(SeedData.FALTAM)
+
+        val spares: Map<String, Map<Int, Int>> = rep.entries
+            .groupBy { it.team }
+            .mapValues { (_, es) -> es.associate { it.number to it.qty } }
+        val missing: Map<String, Set<Int>> = miss.entries
+            .groupBy { it.team }
+            .mapValues { (_, es) -> es.map { it.number }.toSet() }
+
+        val teams = (spares.keys + missing.keys)
+        val stickers = teams.flatMap { team ->
+            val name = Teams.name(team)
+            val teamSpares = spares[team].orEmpty()
+            val teamMissing = missing[team].orEmpty()
+            val numbers: List<Int> = if (team in Teams.specials) {
+                (teamSpares.keys + teamMissing).sorted()
+            } else {
+                (1..Teams.PER_TEAM).toList()
+            }
+            numbers.map { n ->
+                val count = when {
+                    teamSpares.containsKey(n) -> teamSpares.getValue(n) + 1
+                    n in teamMissing -> 0
+                    else -> 1
+                }
+                Sticker(
+                    collectionId = collectionId,
+                    code = "$team $n",
+                    group = name,
+                    count = count,
+                    sortKey = n.toLong()
+                )
+            }
         }
+        stickerDao.insertAll(stickers)
     }
 
     fun observeCollections(): Flow<List<Collection>> = collectionDao.observeAll()
