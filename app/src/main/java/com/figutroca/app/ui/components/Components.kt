@@ -3,6 +3,7 @@ package com.figutroca.app.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,6 +37,7 @@ import com.figutroca.app.ui.theme.OwnedGreen
  * A single sticker cell in the album grid.
  * Tap = add one copy, long-press = remove one copy.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun StickerCell(
     sticker: Sticker,
