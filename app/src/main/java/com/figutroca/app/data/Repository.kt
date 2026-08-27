@@ -45,22 +45,25 @@ class Repository(
     }
 
     /**
-     * Ensures special sections with a fixed size have all their slots. FWC runs
-     * 00 and 1..18; any slot not already present is added as owned (the numbers
-     * the owner didn't list as missing). Existing slots keep their counts.
+     * Ensures special sections with a fixed size have all their slots (FWC runs
+     * 00 and 1..18; CC runs 1..14). Any slot not already present is added as
+     * owned — the numbers the owner didn't list as missing or spare. Existing
+     * slots keep their counts.
      */
     private suspend fun topUpSpecials(collectionId: Long) {
-        val fwc = Teams.specialLabels("FWC") ?: return
-        val slots = fwc.map { (label, key) ->
-            Sticker(
-                collectionId = collectionId,
-                code = "FWC $label",
-                group = Teams.name("FWC"),
-                count = 1,
-                sortKey = key.toLong()
-            )
+        for (code in Teams.specials) {
+            val labels = Teams.specialLabels(code) ?: continue
+            val slots = labels.map { (label, key) ->
+                Sticker(
+                    collectionId = collectionId,
+                    code = "$code $label",
+                    group = Teams.name(code),
+                    count = 1,
+                    sortKey = key.toLong()
+                )
+            }
+            stickerDao.insertAll(slots) // IGNORE keeps any existing sticker's count
         }
-        stickerDao.insertAll(slots) // IGNORE keeps any existing sticker's count
     }
 
     /**

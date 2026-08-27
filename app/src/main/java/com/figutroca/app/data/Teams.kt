@@ -126,6 +126,7 @@ object Teams {
      */
     fun specialLabels(code: String): List<Pair<String, Int>>? = when (code.uppercase()) {
         "FWC" -> listOf("00" to 0) + (1..18).map { it.toString() to it }
+        "CC" -> (1..14).map { it.toString() to it }
         else -> null
     }
 }
