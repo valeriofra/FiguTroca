@@ -11,13 +11,14 @@ object Teams {
     const val PER_TEAM = 20
 
     /** Special (non-team) sections whose size isn't the standard 20. */
-    val specials: Set<String> = setOf("FWC", "CC")
+    val specials: Set<String> = setOf("FWC", "CC", "LEG")
 
     data class Info(val pt: String, val en: String, val iso2: String, val color: Long)
 
     private val info: Map<String, Info> = mapOf(
         "FWC" to Info("FIFA World Cup", "FIFA World Cup", "", 0xFF0067B1),
         "CC" to Info("Coca-Cola", "Coca-Cola", "", 0xFFE61A27),
+        "LEG" to Info("Lendas", "Legends", "", 0xFFC9A227),
         "BRA" to Info("Brasil", "Brazil", "BR", 0xFF009C3B),
         "ARG" to Info("Argentina", "Argentina", "AR", 0xFF6CACE4),
         "FRA" to Info("França", "France", "FR", 0xFF002654),
@@ -86,6 +87,7 @@ object Teams {
         if (iso.length != 2) return when (c) {
             "FWC" -> "🏆"
             "CC" -> "🥤"
+            "LEG" -> "⭐"
             else -> "🎽"
         }
         return iso.uppercase().map { ch -> 0x1F1E6 + (ch.code - 'A'.code) }
@@ -106,7 +108,7 @@ object Teams {
      * cards and the generated lists the same way. Codes not listed sort last.
      */
     val albumOrder: List<String> = listOf(
-        "FWC", "CC",
+        "FWC", "CC", "LEG",
         "MEX", "USA", "CAN",
         "RSA", "KOR", "CZE", "QAT", "BIH", "SUI", "BRA", "MAR", "HAI", "SCO",
         "PAR", "AUS", "TUR", "GER", "CUW", "CIV", "ECU", "NED", "JPN", "SWE",
