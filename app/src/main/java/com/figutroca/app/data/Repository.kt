@@ -1,5 +1,7 @@
 package com.figutroca.app.data
 
+import com.figutroca.app.catalog.CollectionFile
+import com.figutroca.app.catalog.SectionSpec
 import com.figutroca.app.util.ListParser
 import kotlinx.coroutines.flow.Flow
 import org.json.JSONArray
@@ -127,6 +129,52 @@ class Repository(
             addNumberedRange(id, 1, numberedTotal, group = "")
         }
         return id
+    }
+
+    /**
+     * Loads a downloaded [CollectionFile] (see [com.figutroca.app.catalog]) as a
+     * new active collection: every section is expanded into empty sticker slots
+     * (count 0) — from its explicit `labels`, or its `from`..`to` range — so the
+     * album is complete and "Faltam" is accurate from the start.
+     *
+     * This is the bridge from the future catalog/download flow into the current
+     * Room storage; it doesn't change the schema, it just fills it from a file.
+     */
+    suspend fun applyCollectionFile(file: CollectionFile): Long {
+        collectionDao.clearActive()
+        val id = collectionDao.insert(
+            Collection(name = file.name.ifBlank { "Coleção" }, isActive = true)
+        )
+        val stickers = file.sections.flatMap { section -> slotsFor(id, section) }
+        if (stickers.isNotEmpty()) stickerDao.insertAll(stickers)
+        return id
+    }
+
+    /** Builds the empty slots for one section of a [CollectionFile]. */
+    private fun slotsFor(collectionId: Long, section: SectionSpec): List<Sticker> {
+        val group = section.name.ifBlank { section.code }
+        val labels: List<Pair<String, Long>> = when {
+            !section.labels.isNullOrEmpty() ->
+                section.labels.mapIndexed { i, raw ->
+                    val label = raw.trim()
+                    label to (label.toLongOrNull() ?: i.toLong())
+                }
+            section.from != null && section.to != null -> {
+                val lo = minOf(section.from, section.to)
+                val hi = maxOf(section.from, section.to)
+                (lo..hi).map { it.toString() to it.toLong() }
+            }
+            else -> emptyList()
+        }
+        return labels.map { (label, key) ->
+            Sticker(
+                collectionId = collectionId,
+                code = "${section.code} $label",
+                group = group,
+                count = 0,
+                sortKey = key
+            )
+        }
     }
 
     /** Adds a numbered range to a specific team/section, e.g. "LEG 1".."LEG 100". */
