@@ -21,8 +21,13 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -166,18 +171,39 @@ fun TeamSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var selectedId by remember { mutableStateOf<Long?>(null) }
+    var locked by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
             Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 28.dp),
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text(Teams.flag(group.code), fontSize = 26.sp)
-                Text("${group.code} · ${group.name}", style = MaterialTheme.typography.titleLarge)
+                Text(
+                    "${group.code} · ${group.name}",
+                    style = MaterialTheme.typography.titleLarge,
+                    modifier = Modifier.weight(1f)
+                )
+                FilledTonalIconButton(
+                    onClick = { locked = !locked; if (locked) selectedId = null },
+                    colors = if (locked) IconButtonDefaults.filledTonalIconButtonColors(
+                        containerColor = RedBadge, contentColor = Color.White
+                    ) else IconButtonDefaults.filledTonalIconButtonColors()
+                ) {
+                    Icon(
+                        if (locked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                        contentDescription = if (locked) "Destravar edição" else "Travar edição"
+                    )
+                }
             }
             Text(
-                subtitle,
+                if (locked) "🔒 Travado — toque no cadeado para editar"
+                else "Toque num vazio para adicionar · segure para ajustar",
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp)
@@ -200,6 +226,7 @@ fun TeamSheet(
                             sticker = s,
                             badge = badgeOf(s),
                             selected = selectedId == s.id,
+                            locked = locked,
                             onSelect = { selectedId = s.id },
                             onDeselect = { selectedId = null },
                             onInc = { onInc(s) },
@@ -224,6 +251,7 @@ fun StickerRect(
     sticker: Sticker,
     badge: Int?,
     selected: Boolean,
+    locked: Boolean,
     onSelect: () -> Unit,
     onDeselect: () -> Unit,
     onInc: () -> Unit,
@@ -248,8 +276,15 @@ fun StickerRect(
                 ) else Modifier
             )
             .combinedClickable(
-                onClick = { if (selected) onDeselect() else onSelect() },
-                onLongClick = onSelect
+                onClick = {
+                    if (locked) return@combinedClickable
+                    when {
+                        selected -> onDeselect()
+                        !have -> onInc() // tap an empty slot to add it
+                        else -> onSelect() // owned -> open the -/+ stepper
+                    }
+                },
+                onLongClick = { if (!locked) onSelect() }
             ),
         contentAlignment = Alignment.Center
     ) {

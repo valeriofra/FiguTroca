@@ -73,9 +73,15 @@ object Teams {
     fun color(code: String): Long = info[code.uppercase()]?.color ?: 0xFF5B6572
     fun isKnown(code: String): Boolean = info.containsKey(code.uppercase())
 
-    /** Regional-indicator emoji flag for the team's country, or a fallback. */
+    /** Emoji flag for the team's country, or a fallback. */
     fun flag(code: String): String {
         val c = code.uppercase()
+        // UK constituent nations have their own subdivision (tag-sequence) flags.
+        when (c) {
+            "SCO" -> return tagFlag("gbsct")
+            "ENG" -> return tagFlag("gbeng")
+            "WAL" -> return tagFlag("gbwls")
+        }
         val iso = info[c]?.iso2 ?: ""
         if (iso.length != 2) return when (c) {
             "FWC" -> "🏆"
@@ -84,6 +90,15 @@ object Teams {
         }
         return iso.uppercase().map { ch -> 0x1F1E6 + (ch.code - 'A'.code) }
             .joinToString("") { cp -> String(Character.toChars(cp)) }
+    }
+
+    /** Builds a subdivision flag emoji (e.g. "gbsct" -> Scotland). */
+    private fun tagFlag(sub: String): String {
+        val sb = StringBuilder()
+        sb.appendCodePoint(0x1F3F4)
+        for (ch in sub) sb.appendCodePoint(0xE0000 + ch.code)
+        sb.appendCodePoint(0xE007F)
+        return sb.toString()
     }
 
     /**
