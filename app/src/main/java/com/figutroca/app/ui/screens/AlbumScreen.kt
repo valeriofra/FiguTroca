@@ -4,18 +4,23 @@ import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Share
@@ -34,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -116,14 +122,7 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
                     SectionPill("${stats.duplicates}", "Repetidas", DuplicateAmber,
                         section == Section.REPETIDAS, Modifier.weight(1f)) { section = Section.REPETIDAS }
                 }
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = vm::setQuery,
-                    leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
-                    placeholder = { Text("Buscar seleção") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                DiscreetSearch(query = query, onQueryChange = vm::setQuery)
                 if (section != Section.ALBUM) {
                     val listText = if (section == Section.REPETIDAS)
                         ShareLists.duplicates(name, album.stickers)
@@ -235,5 +234,42 @@ private fun SectionPill(
     ) {
         Text(value, color = valueColor, fontWeight = FontWeight.Bold, fontSize = 22.sp)
         Text(label, color = labelColor, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+    }
+}
+
+@Composable
+private fun DiscreetSearch(query: String, onQueryChange: (String) -> Unit) {
+    val muted = MaterialTheme.colorScheme.onSurfaceVariant
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(42.dp)
+            .clip(RoundedCornerShape(21.dp))
+            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
+            .padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Rounded.Search, contentDescription = null, tint = muted, modifier = Modifier.size(18.dp))
+        Box(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+            if (query.isEmpty()) {
+                Text("Buscar seleção", color = muted, fontSize = 14.sp)
+            }
+            BasicTextField(
+                value = query,
+                onValueChange = onQueryChange,
+                singleLine = true,
+                textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        if (query.isNotEmpty()) {
+            Icon(
+                Icons.Rounded.Close,
+                contentDescription = "Limpar",
+                tint = muted,
+                modifier = Modifier.size(18.dp).clickable { onQueryChange("") }
+            )
+        }
     }
 }
