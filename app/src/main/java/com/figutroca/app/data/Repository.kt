@@ -129,6 +129,23 @@ class Repository(
         return id
     }
 
+    /** Adds a numbered range to a specific team/section, e.g. "LEG 1".."LEG 100". */
+    suspend fun addTeamRange(collectionId: Long, teamCode: String, from: Int, to: Int) {
+        val lo = minOf(from, to)
+        val hi = maxOf(from, to)
+        val name = Teams.name(teamCode)
+        val stickers = (lo..hi).map { n ->
+            Sticker(
+                collectionId = collectionId,
+                code = "$teamCode $n",
+                group = name,
+                count = 0,
+                sortKey = n.toLong()
+            )
+        }
+        stickerDao.insertAll(stickers) // IGNORE keeps existing counts
+    }
+
     /** Adds sticker slots numbered [from]..[to] (inclusive) to a collection. */
     suspend fun addNumberedRange(collectionId: Long, from: Int, to: Int, group: String) {
         val lo = minOf(from, to)

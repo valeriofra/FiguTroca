@@ -6,12 +6,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import android.widget.Toast
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.ContentPaste
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -31,7 +29,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.figutroca.app.R
-import com.figutroca.app.ui.components.AddStickerSheet
 import com.figutroca.app.ui.components.ImportSheet
 import com.figutroca.app.ui.screens.AlbumScreen
 import com.figutroca.app.ui.screens.CollectionsScreen
@@ -45,7 +42,6 @@ private enum class Tab(val label: String, val icon: ImageVector) {
 @Composable
 fun FiguTrocaApp(vm: AppViewModel) {
     var tab by remember { mutableStateOf(Tab.ALBUM) }
-    var showAdd by remember { mutableStateOf(false) }
     var showImport by remember { mutableStateOf(false) }
     val context = LocalContext.current
 
@@ -79,15 +75,6 @@ fun FiguTrocaApp(vm: AppViewModel) {
                     )
                 }
             }
-        },
-        floatingActionButton = {
-            if (tab == Tab.ALBUM) {
-                ExtendedFloatingActionButton(
-                    onClick = { showAdd = true },
-                    icon = { Icon(Icons.Rounded.Add, contentDescription = null) },
-                    text = { Text("Figurinhas") }
-                )
-            }
         }
     ) { padding ->
         Crossfade(targetState = tab, label = "tab", modifier = Modifier.fillMaxSize()) { current ->
@@ -96,14 +83,6 @@ fun FiguTrocaApp(vm: AppViewModel) {
                 Tab.COLLECTIONS -> CollectionsScreen(vm, padding)
             }
         }
-    }
-
-    if (showAdd) {
-        AddStickerSheet(
-            onDismiss = { showAdd = false },
-            onAddRange = { from, to, group -> vm.addRange(from, to, group) },
-            onAddCodes = { raw, group -> vm.addCodes(raw, group) }
-        )
     }
 
     if (showImport) {

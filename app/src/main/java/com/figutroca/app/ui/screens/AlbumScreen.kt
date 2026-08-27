@@ -205,8 +205,7 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
             stickers = shownStickers,
             badgeOf = { s -> if (section == Section.REPETIDAS) s.duplicates else null },
             onTap = onTap,
-            onInc = { vm.increment(it) },
-            onDec = { vm.decrement(it) },
+            onAddRange = { from, to -> vm.addTeamRange(group.code, from, to) },
             onDismiss = { openTeamCode = null }
         )
     }

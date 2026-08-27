@@ -1,16 +1,13 @@
 package com.figutroca.app.ui.components
 
-import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -21,9 +18,13 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
@@ -31,7 +32,9 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -166,13 +170,12 @@ fun TeamSheet(
     stickers: List<Sticker>,
     badgeOf: (Sticker) -> Int?,
     onTap: (Sticker) -> Unit,
-    onInc: (Sticker) -> Unit,
-    onDec: (Sticker) -> Unit,
+    onAddRange: (from: Int, to: Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var selectedId by remember { mutableStateOf<Long?>(null) }
-    var locked by remember { mutableStateOf(false) }
+    var locked by remember { mutableStateOf(true) } // starts locked to avoid accidental changes
+    var showAddRange by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
         Column(
@@ -190,8 +193,11 @@ fun TeamSheet(
                     style = MaterialTheme.typography.titleLarge,
                     modifier = Modifier.weight(1f)
                 )
+                FilledTonalIconButton(onClick = { showAddRange = true }) {
+                    Icon(Icons.Rounded.Add, contentDescription = "Adicionar por intervalo")
+                }
                 FilledTonalIconButton(
-                    onClick = { locked = !locked; if (locked) selectedId = null },
+                    onClick = { locked = !locked },
                     colors = if (locked) IconButtonDefaults.filledTonalIconButtonColors(
                         containerColor = RedBadge, contentColor = Color.White
                     ) else IconButtonDefaults.filledTonalIconButtonColors()
@@ -225,39 +231,84 @@ fun TeamSheet(
                         StickerRect(
                             sticker = s,
                             badge = badgeOf(s),
-                            selected = selectedId == s.id,
                             locked = locked,
-                            onTap = { onTap(s) },
-                            onSelect = { selectedId = s.id },
-                            onDeselect = { selectedId = null },
-                            onInc = { onInc(s) },
-                            onDec = { onDec(s) }
+                            onTap = { onTap(s) }
                         )
                     }
                 }
             }
         }
     }
+
+    if (showAddRange) {
+        AddRangeDialog(
+            teamCode = group.code,
+            onDismiss = { showAddRange = false },
+            onConfirm = { from, to -> onAddRange(from, to); showAddRange = false }
+        )
+    }
+}
+
+@Composable
+private fun AddRangeDialog(teamCode: String, onDismiss: () -> Unit, onConfirm: (Int, Int) -> Unit) {
+    var from by remember { mutableStateOf("1") }
+    var to by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Adicionar em $teamCode") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    "Cria as figurinhas $teamCode de um número ao outro (como faltando).",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedTextField(
+                        value = from,
+                        onValueChange = { from = it.filter(Char::isDigit) },
+                        label = { Text("De") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = to,
+                        onValueChange = { to = it.filter(Char::isDigit) },
+                        label = { Text("Até") },
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val f = from.toIntOrNull()
+                    val t = to.toIntOrNull()
+                    if (f != null && t != null) onConfirm(f, t)
+                },
+                enabled = from.toIntOrNull() != null && to.toIntOrNull() != null
+            ) { Text("Adicionar") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
 }
 
 /**
  * A sticker rectangle styled like an album slot. Owned = the selection's base
  * colour with a faint player silhouette, the flag, the code and the number;
  * missing = an empty gray slot. [badge] (when > 0) shows a red count on top.
- * Long-press / tap reveals -/+ controls.
+ * A tap runs the section action; disabled while the popup is locked.
  */
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun StickerRect(
     sticker: Sticker,
     badge: Int?,
-    selected: Boolean,
     locked: Boolean,
-    onTap: () -> Unit,
-    onSelect: () -> Unit,
-    onDeselect: () -> Unit,
-    onInc: () -> Unit,
-    onDec: () -> Unit
+    onTap: () -> Unit
 ) {
     val have = sticker.owned
     val prefix = sticker.code.substringBefore(' ')
@@ -277,60 +328,39 @@ fun StickerRect(
                     1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.4f), RoundedCornerShape(12.dp)
                 ) else Modifier
             )
-            .combinedClickable(
-                onClick = {
-                    if (locked) return@combinedClickable
-                    if (selected) onDeselect() else onTap()
-                },
-                onLongClick = { if (!locked) onSelect() }
-            ),
+            .clickable(enabled = !locked, onClick = onTap),
         contentAlignment = Alignment.Center
     ) {
-        if (have && !selected) {
+        if (have) {
             Icon(
                 painter = painterResource(R.drawable.ic_player),
                 contentDescription = null,
                 tint = onBase.copy(alpha = 0.16f),
                 modifier = Modifier.fillMaxSize().padding(top = 14.dp)
             )
-        }
-
-        if (selected) {
-            Row(
-                Modifier.fillMaxSize(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                StepZone("−", fg, onDec)
-                Text("${sticker.count}", color = fg, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                StepZone("+", fg, onInc)
-            }
-        } else {
-            if (have) {
-                Text(
-                    Teams.flag(prefix),
-                    fontSize = 13.sp,
-                    modifier = Modifier.align(Alignment.TopStart).padding(4.dp)
-                )
-                Text(
-                    prefix,
-                    color = fg.copy(alpha = 0.85f),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 8.5.sp,
-                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp)
-                )
-            }
             Text(
-                number,
-                color = fg,
+                Teams.flag(prefix),
+                fontSize = 13.sp,
+                modifier = Modifier.align(Alignment.TopStart).padding(4.dp)
+            )
+            Text(
+                prefix,
+                color = fg.copy(alpha = 0.85f),
                 fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 4.dp)
+                fontSize = 8.5.sp,
+                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp)
             )
         }
+        Text(
+            number,
+            color = fg,
+            fontWeight = FontWeight.Bold,
+            fontSize = 20.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center,
+            modifier = Modifier.padding(horizontal = 4.dp)
+        )
 
         if (badge != null && badge > 0) {
             Box(
@@ -343,17 +373,3 @@ fun StickerRect(
     }
 }
 
-@Composable
-private fun androidx.compose.foundation.layout.RowScope.StepZone(label: String, fg: Color, onClick: () -> Unit) {
-    Box(
-        Modifier.weight(1f).fillMaxHeight().clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) {
-        Box(
-            Modifier.size(30.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.28f)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(label, color = fg, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
-    }
-}

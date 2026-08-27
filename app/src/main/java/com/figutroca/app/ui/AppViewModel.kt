@@ -109,6 +109,11 @@ class AppViewModel(app: Application) : AndroidViewModel(app) {
         repo.addNumberedRange(id, from, to, group)
     }
 
+    fun addTeamRange(teamCode: String, from: Int, to: Int) = viewModelScope.launch {
+        val id = albumState.value.activeCollection?.id ?: return@launch
+        repo.addTeamRange(id, teamCode, from, to)
+    }
+
     fun addCodes(raw: String, group: String) = viewModelScope.launch {
         val id = albumState.value.activeCollection?.id ?: return@launch
         repo.addCodes(id, raw, group)
