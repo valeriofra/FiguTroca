@@ -32,14 +32,35 @@ class Repository(
      */
     suspend fun ensureActiveCollection() {
         val active = collectionDao.getActive()
-        if (active == null) {
+        val id = if (active == null) {
             collectionDao.clearActive()
-            val id = collectionDao.insert(Collection(name = "Copa do Mundo 2026", isActive = true))
-            seedCollection(id)
-        } else if (stickerDao.countFor(active.id) == 0) {
-            // Fill an empty active collection left over from an earlier install.
-            seedCollection(active.id)
+            val newId = collectionDao.insert(Collection(name = "Copa do Mundo 2026", isActive = true))
+            seedCollection(newId)
+            newId
+        } else {
+            if (stickerDao.countFor(active.id) == 0) seedCollection(active.id)
+            active.id
         }
+        topUpSpecials(id)
+    }
+
+    /**
+     * Ensures special sections with a fixed size have all their slots. FWC runs
+     * 00 and 1..18; any slot not already present is added as owned (the numbers
+     * the owner didn't list as missing). Existing slots keep their counts.
+     */
+    private suspend fun topUpSpecials(collectionId: Long) {
+        val fwc = Teams.specialLabels("FWC") ?: return
+        val slots = fwc.map { (label, key) ->
+            Sticker(
+                collectionId = collectionId,
+                code = "FWC $label",
+                group = Teams.name("FWC"),
+                count = 1,
+                sortKey = key.toLong()
+            )
+        }
+        stickerDao.insertAll(slots) // IGNORE keeps any existing sticker's count
     }
 
     /**

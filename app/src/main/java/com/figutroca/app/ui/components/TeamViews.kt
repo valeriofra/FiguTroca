@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -37,15 +38,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.figutroca.app.R
 import com.figutroca.app.data.Sticker
 import com.figutroca.app.data.Teams
 import com.figutroca.app.ui.theme.MissingGray
-import com.figutroca.app.ui.theme.OwnedGreen
 
 private val RedBadge = Color(0xFFE4002B)
 
@@ -61,14 +63,14 @@ data class TeamGroup(
     val duplicates: Int get() = stickers.sumOf { it.duplicates }
 }
 
-/** Groups a flat sticker list by team code (prefix before the space). */
+/** Groups a flat sticker list by team code (prefix), in official album order. */
 fun groupTeams(stickers: List<Sticker>): List<TeamGroup> =
     stickers
         .groupBy { it.code.substringBefore(' ') }
         .map { (code, list) ->
             TeamGroup(code, Teams.name(code), list.sortedBy { it.sortKey })
         }
-        .sortedWith(compareBy({ if (it.code in Teams.specials) 0 else 1 }, { it.name }))
+        .sortedWith(compareBy({ Teams.orderIndex(it.code) }, { it.name }))
 
 /**
  * A team card: flag on top, then the code (large) and the English + Portuguese
@@ -95,36 +97,45 @@ fun TeamCard(
             .clickable(onClick = onClick)
     ) {
         Column(
-            Modifier.fillMaxWidth().padding(14.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(2.dp)
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            Text(Teams.flag(group.code), fontSize = 34.sp)
-            Text(group.code, color = onBase, fontWeight = FontWeight.Bold, fontSize = 22.sp)
+            // Flag dominates the card.
+            Text(Teams.flag(group.code), fontSize = 60.sp, lineHeight = 64.sp)
+            Text(
+                group.code,
+                color = onBase,
+                fontWeight = FontWeight.Bold,
+                fontSize = 24.sp,
+                lineHeight = 26.sp
+            )
             Text(
                 Teams.enName(group.code),
                 color = onBase,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
+                lineHeight = 13.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 group.name,
                 color = soft,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
+                lineHeight = 12.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            Text(subtitle, color = soft, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
             LinearProgressIndicator(
                 progress = { if (group.total == 0) 0f else group.owned.toFloat() / group.total },
-                modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
                 color = onBase,
                 trackColor = onBase.copy(alpha = 0.25f),
                 gapSize = 0.dp,
                 drawStopIndicator = {}
             )
+            Text(subtitle, color = soft, fontSize = 10.sp, lineHeight = 12.sp, modifier = Modifier.padding(top = 3.dp))
         }
         if (badge != null && badge > 0) {
             Box(
@@ -202,8 +213,10 @@ fun TeamSheet(
 }
 
 /**
- * A sticker rectangle. Green = owned, gray = missing. [badge], when set and
- * positive, shows a red count on top. Long-press / tap reveals -/+ controls.
+ * A sticker rectangle styled like an album slot. Owned = the selection's base
+ * colour with a faint player silhouette, the flag, the code and the number;
+ * missing = an empty gray slot. [badge] (when > 0) shows a red count on top.
+ * Long-press / tap reveals -/+ controls.
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -217,8 +230,12 @@ fun StickerRect(
     onDec: () -> Unit
 ) {
     val have = sticker.owned
-    val bg = if (have) OwnedGreen else MissingGray.copy(alpha = 0.22f)
-    val fg = if (have) Color.White else MaterialTheme.colorScheme.onSurfaceVariant
+    val prefix = sticker.code.substringBefore(' ')
+    val number = if (sticker.code.contains(' ')) sticker.code.substringAfter(' ') else sticker.code
+    val base = Color(Teams.color(prefix))
+    val onBase = if (base.luminance() > 0.6f) Color(0xFF1A1A1A) else Color.White
+    val bg = if (have) base else MissingGray.copy(alpha = 0.18f)
+    val fg = if (have) onBase else MaterialTheme.colorScheme.onSurfaceVariant
 
     Box(
         modifier = Modifier
@@ -236,6 +253,15 @@ fun StickerRect(
             ),
         contentAlignment = Alignment.Center
     ) {
+        if (have && !selected) {
+            Icon(
+                painter = painterResource(R.drawable.ic_player),
+                contentDescription = null,
+                tint = onBase.copy(alpha = 0.16f),
+                modifier = Modifier.fillMaxSize().padding(top = 14.dp)
+            )
+        }
+
         if (selected) {
             Row(
                 Modifier.fillMaxSize(),
@@ -247,22 +273,30 @@ fun StickerRect(
                 StepZone("+", fg, onInc)
             }
         } else {
-            val parts = sticker.code.split(' ', limit = 2)
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                if (parts.size == 2) {
-                    Text(parts[0], color = fg.copy(alpha = 0.85f), fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
-                }
+            if (have) {
                 Text(
-                    if (parts.size == 2) parts[1] else sticker.code,
-                    color = fg,
+                    Teams.flag(prefix),
+                    fontSize = 13.sp,
+                    modifier = Modifier.align(Alignment.TopStart).padding(4.dp)
+                )
+                Text(
+                    prefix,
+                    color = fg.copy(alpha = 0.85f),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(horizontal = 4.dp)
+                    fontSize = 8.5.sp,
+                    modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp)
                 )
             }
+            Text(
+                number,
+                color = fg,
+                fontWeight = FontWeight.Bold,
+                fontSize = 20.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 4.dp)
+            )
         }
 
         if (badge != null && badge > 0) {

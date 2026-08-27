@@ -1,0 +1,20 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24"
+    android:tint="?attr/colorControlNormal">
+    <!-- Generic trophy (not the FIFA World Cup Trophy). -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M7,3 L17,3 L17,7 C17,10.3 14.8,12.6 12,12.9 C9.2,12.6 7,10.3 7,7 Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M6.5,4 C3.5,4 3.5,9 7,9.3 L7,7.6 C5.3,7.3 5.3,5.7 6.5,5.6 Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M17.5,4 C20.5,4 20.5,9 17,9.3 L17,7.6 C18.7,7.3 18.7,5.7 17.5,5.6 Z" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M11,12.5 L13,12.5 L13,16 L16,16 L16,18.5 L8,18.5 L8,16 L11,16 Z" />
+</vector>

@@ -1,0 +1,13 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <!-- Generic player silhouette. -->
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M12,3 m-3.2,0 a3.2,3.2 0 1,0 6.4,0 a3.2,3.2 0 1,0 -6.4,0" />
+    <path
+        android:fillColor="@android:color/white"
+        android:pathData="M5.5,23 C5.5,15.5 8.2,11 12,11 C15.8,11 18.5,15.5 18.5,23 Z" />
+</vector>

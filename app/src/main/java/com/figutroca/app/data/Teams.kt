@@ -17,7 +17,7 @@ object Teams {
 
     private val info: Map<String, Info> = mapOf(
         "FWC" to Info("FIFA World Cup", "FIFA World Cup", "", 0xFF0067B1),
-        "CC" to Info("Especiais", "Special", "", 0xFF8A1538),
+        "CC" to Info("Coca-Cola", "Coca-Cola", "", 0xFFE61A27),
         "BRA" to Info("Brasil", "Brazil", "BR", 0xFF009C3B),
         "ARG" to Info("Argentina", "Argentina", "AR", 0xFF6CACE4),
         "FRA" to Info("França", "France", "FR", 0xFF002654),
@@ -75,9 +75,42 @@ object Teams {
 
     /** Regional-indicator emoji flag for the team's country, or a fallback. */
     fun flag(code: String): String {
-        val iso = info[code.uppercase()]?.iso2 ?: ""
-        if (iso.length != 2) return if (code.uppercase() in specials) "🏆" else "🎽"
-        return iso.uppercase().map { c -> 0x1F1E6 + (c.code - 'A'.code) }
+        val c = code.uppercase()
+        val iso = info[c]?.iso2 ?: ""
+        if (iso.length != 2) return when (c) {
+            "FWC" -> "🏆"
+            "CC" -> "🥤"
+            else -> "🎽"
+        }
+        return iso.uppercase().map { ch -> 0x1F1E6 + (ch.code - 'A'.code) }
             .joinToString("") { cp -> String(Character.toChars(cp)) }
+    }
+
+    /**
+     * Official album order (specials first, then teams). Used to sort the team
+     * cards and the generated lists the same way. Codes not listed sort last.
+     */
+    val albumOrder: List<String> = listOf(
+        "FWC", "CC",
+        "MEX", "USA", "CAN",
+        "RSA", "KOR", "CZE", "QAT", "BIH", "SUI", "BRA", "MAR", "HAI", "SCO",
+        "PAR", "AUS", "TUR", "GER", "CUW", "CIV", "ECU", "NED", "JPN", "SWE",
+        "TUN", "BEL", "EGY", "IRN", "NZL", "URU", "KSA", "CPV", "ESP", "FRA",
+        "SEN", "IRQ", "NOR", "POR", "COD", "UZB", "COL", "ENG", "CRO", "GHA",
+        "PAN", "ARG", "ALG", "AUT", "JOR"
+    )
+
+    fun orderIndex(code: String): Int {
+        val i = albumOrder.indexOf(code.uppercase())
+        return if (i >= 0) i else Int.MAX_VALUE
+    }
+
+    /**
+     * Fixed sticker labels for a special section, or null to use only the
+     * numbers seen in the imported lists. FWC runs 00, 1..18.
+     */
+    fun specialLabels(code: String): List<Pair<String, Int>>? = when (code.uppercase()) {
+        "FWC" -> listOf("00" to 0) + (1..18).map { it.toString() to it }
+        else -> null
     }
 }

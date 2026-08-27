@@ -3,18 +3,19 @@
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <!-- Soccer ball centered within the adaptive icon safe zone. -->
-    <group android:scaleX="1.35" android:scaleY="1.35" android:pivotX="54" android:pivotY="54">
+    <!-- Generic trophy centered in the adaptive-icon safe zone. -->
+    <group android:scaleX="3.4" android:scaleY="3.4" android:translateX="13.2" android:translateY="13.2">
         <path
             android:fillColor="#FFFFFF"
-            android:pathData="M54,32 A22,22 0 1,0 54.01,32 Z" />
+            android:pathData="M7,3 L17,3 L17,7 C17,10.3 14.8,12.6 12,12.9 C9.2,12.6 7,10.3 7,7 Z" />
         <path
-            android:fillColor="#0067B1"
-            android:pathData="M54,40 l6.5,4.7 -2.5,7.6 h-8 l-2.5,-7.6 Z" />
+            android:fillColor="#FFFFFF"
+            android:pathData="M6.5,4 C3.5,4 3.5,9 7,9.3 L7,7.6 C5.3,7.3 5.3,5.7 6.5,5.6 Z" />
         <path
-            android:fillColor="#0067B1"
-            android:strokeColor="#0067B1"
-            android:strokeWidth="1.6"
-            android:pathData="M54,32 L54,40 M65.4,40 L60.5,44.7 M42.6,40 L47.5,44.7 M49.5,64 L47.5,52.3 M58.5,64 L60.5,52.3" />
+            android:fillColor="#FFFFFF"
+            android:pathData="M17.5,4 C20.5,4 20.5,9 17,9.3 L17,7.6 C18.7,7.3 18.7,5.7 17.5,5.6 Z" />
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M11,12.5 L13,12.5 L13,16 L16,16 L16,18.5 L8,18.5 L8,16 L11,16 Z" />
     </group>
 </vector>
