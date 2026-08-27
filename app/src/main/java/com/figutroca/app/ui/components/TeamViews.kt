@@ -162,9 +162,10 @@ fun TeamCard(
 @Composable
 fun TeamSheet(
     group: TeamGroup,
-    subtitle: String,
+    hint: String,
     stickers: List<Sticker>,
     badgeOf: (Sticker) -> Int?,
+    onTap: (Sticker) -> Unit,
     onInc: (Sticker) -> Unit,
     onDec: (Sticker) -> Unit,
     onDismiss: () -> Unit
@@ -202,8 +203,7 @@ fun TeamSheet(
                 }
             }
             Text(
-                if (locked) "🔒 Travado — toque no cadeado para editar"
-                else "Toque num vazio para adicionar · segure para ajustar",
+                if (locked) "🔒 Travado — toque no cadeado para editar" else hint,
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 12.dp)
@@ -227,6 +227,7 @@ fun TeamSheet(
                             badge = badgeOf(s),
                             selected = selectedId == s.id,
                             locked = locked,
+                            onTap = { onTap(s) },
                             onSelect = { selectedId = s.id },
                             onDeselect = { selectedId = null },
                             onInc = { onInc(s) },
@@ -252,6 +253,7 @@ fun StickerRect(
     badge: Int?,
     selected: Boolean,
     locked: Boolean,
+    onTap: () -> Unit,
     onSelect: () -> Unit,
     onDeselect: () -> Unit,
     onInc: () -> Unit,
@@ -278,11 +280,7 @@ fun StickerRect(
             .combinedClickable(
                 onClick = {
                     if (locked) return@combinedClickable
-                    when {
-                        selected -> onDeselect()
-                        !have -> onInc() // tap an empty slot to add it
-                        else -> onSelect() // owned -> open the -/+ stepper
-                    }
+                    if (selected) onDeselect() else onTap()
                 },
                 onLongClick = { if (!locked) onSelect() }
             ),

@@ -189,16 +189,23 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
             Section.FALTAM -> group.stickers.filter { it.missing }
             Section.REPETIDAS -> group.stickers.filter { it.duplicates > 0 }
         }
-        val subtitle = when (section) {
-            Section.ALBUM -> "${group.owned}/${group.total} · segure para ajustar"
-            Section.FALTAM -> "Faltam ${group.missing} · segure para ajustar"
-            Section.REPETIDAS -> "${group.duplicates} repetidas · segure para ajustar"
+        val hint = when (section) {
+            Section.ALBUM -> "Toque p/ marcar ou desmarcar · segure p/ ajustar"
+            Section.FALTAM -> "Toque para marcar como colada · segure p/ ajustar"
+            Section.REPETIDAS -> "Cada toque soma +1 · segure para ajustar"
+        }
+        val onTap: (com.figutroca.app.data.Sticker) -> Unit = when (section) {
+            // Album: a tap toggles between "tenho" (1) and "vazio" (0).
+            Section.ALBUM -> { s -> vm.setCount(s, if (s.owned) 0 else 1) }
+            // Faltam / Repetidas: each tap adds one copy.
+            else -> { s -> vm.increment(s) }
         }
         TeamSheet(
             group = group,
-            subtitle = subtitle,
+            hint = hint,
             stickers = shownStickers,
             badgeOf = { s -> if (section == Section.REPETIDAS) s.duplicates else null },
+            onTap = onTap,
             onInc = { vm.increment(it) },
             onDec = { vm.decrement(it) },
             onDismiss = { openTeamCode = null }
