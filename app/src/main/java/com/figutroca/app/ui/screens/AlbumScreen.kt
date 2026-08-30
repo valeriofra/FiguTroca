@@ -34,6 +34,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -68,6 +69,9 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
     val clipboard = LocalClipboardManager.current
     var section by remember { mutableStateOf(Section.ALBUM) }
     var openTeamCode by remember { mutableStateOf<String?>(null) }
+    // Shared across every team popup: locked by default, and a change persists
+    // when you close a popup and open another one.
+    var locked by rememberSaveable { mutableStateOf(true) }
 
     if (album.activeCollection == null) {
         EmptyState(
@@ -204,6 +208,8 @@ fun AlbumScreen(vm: AppViewModel, contentPadding: PaddingValues) {
             hint = hint,
             stickers = shownStickers,
             badgeOf = { s -> if (section == Section.REPETIDAS) s.duplicates else null },
+            locked = locked,
+            onToggleLock = { locked = !locked },
             onTap = onTap,
             onAddRange = { from, to -> vm.addTeamRange(group.code, from, to) },
             onDismiss = { openTeamCode = null }

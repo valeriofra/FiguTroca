@@ -169,12 +169,13 @@ fun TeamSheet(
     hint: String,
     stickers: List<Sticker>,
     badgeOf: (Sticker) -> Int?,
+    locked: Boolean,
+    onToggleLock: () -> Unit,
     onTap: (Sticker) -> Unit,
     onAddRange: (from: Int, to: Int) -> Unit,
     onDismiss: () -> Unit
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    var locked by remember { mutableStateOf(true) } // starts locked to avoid accidental changes
     var showAddRange by remember { mutableStateOf(false) }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = sheetState) {
@@ -197,7 +198,7 @@ fun TeamSheet(
                     Icon(Icons.Rounded.Add, contentDescription = "Adicionar por intervalo")
                 }
                 FilledTonalIconButton(
-                    onClick = { locked = !locked },
+                    onClick = onToggleLock,
                     colors = if (locked) IconButtonDefaults.filledTonalIconButtonColors(
                         containerColor = RedBadge, contentColor = Color.White
                     ) else IconButtonDefaults.filledTonalIconButtonColors()
