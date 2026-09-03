@@ -321,7 +321,8 @@ fun StickerRect(
 
     Box(
         modifier = Modifier
-            .aspectRatio(1f)
+            // Portrait collectible-card ratio (matches the ROMi sticker art: 12541 x 17277).
+            .aspectRatio(0.726f)
             .clip(RoundedCornerShape(12.dp))
             .background(bg)
             .then(

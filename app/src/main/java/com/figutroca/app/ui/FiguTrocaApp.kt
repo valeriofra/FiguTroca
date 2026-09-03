@@ -1,9 +1,10 @@
 package com.figutroca.app.ui
 
 import androidx.compose.animation.Crossfade
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import android.widget.Toast
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ContentPaste
@@ -12,7 +13,6 @@ import androidx.compose.material.icons.rounded.Inventory2
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
@@ -48,13 +48,11 @@ fun FiguTrocaApp(vm: AppViewModel) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("FiguTroca") },
-                navigationIcon = {
-                    Icon(
-                        painter = painterResource(R.drawable.ic_trophy),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.padding(start = 12.dp).size(28.dp)
+                title = {
+                    Image(
+                        painter = painterResource(R.drawable.ic_romi_wordmark),
+                        contentDescription = "ROMi",
+                        modifier = Modifier.padding(vertical = 6.dp).height(28.dp)
                     )
                 },
                 actions = {
