@@ -7,13 +7,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -47,9 +48,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
@@ -301,8 +305,6 @@ private fun AddRangeDialog(teamCode: String, onDismiss: () -> Unit, onConfirm: (
     )
 }
 
-private val CardYellow = Color(0xFFFFF212)
-
 /**
  * A sticker styled like the ROMi collectible card. Everything that changes per
  * selection comes from the code prefix: the base colour is the background, the
@@ -323,7 +325,6 @@ fun StickerRect(
     val number = if (sticker.code.contains(' ')) sticker.code.substringAfter(' ') else sticker.code
     val paddedNumber = number.toIntOrNull()?.let { "%02d".format(it) } ?: number
     val base = Color(Teams.color(prefix))
-    val onBase = if (base.luminance() > 0.6f) Color(0xFF1A1A1A) else Color.White
 
     Box(
         modifier = Modifier
@@ -340,7 +341,7 @@ fun StickerRect(
         contentAlignment = Alignment.Center
     ) {
         if (have) {
-            OwnedCard(prefix = prefix, number = number, paddedNumber = paddedNumber, base = base, onBase = onBase)
+            OwnedCard(prefix = prefix, number = number, paddedNumber = paddedNumber)
         } else {
             Text(
                 number,
@@ -369,111 +370,83 @@ fun StickerRect(
 private fun BoxScope.OwnedCard(
     prefix: String,
     number: String,
-    paddedNumber: String,
-    base: Color,
-    onBase: Color
+    paddedNumber: String
 ) {
-    // Player silhouette, sitting above the bottom banners.
-    Icon(
-        painter = painterResource(R.drawable.ic_player),
-        contentDescription = null,
-        tint = onBase.copy(alpha = 0.20f),
-        modifier = Modifier.fillMaxSize().padding(top = 12.dp, bottom = 34.dp)
-    )
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val w = maxWidth
+        val h = maxHeight
+        val u = w.value // card width in dp, used to scale text with the tile size
+        val numberShadow = Shadow(color = Color(0x99000000), offset = Offset(0f, 2f), blurRadius = 4f)
 
-    // Big sticker number (top-left), colour adapts to the background.
-    Text(
-        number,
-        color = onBase,
-        fontWeight = FontWeight.Bold,
-        fontSize = 22.sp,
-        lineHeight = 22.sp,
-        modifier = Modifier.align(Alignment.TopStart).padding(start = 8.dp, top = 6.dp)
-    )
-
-    // Generic emblem (top-right) — not a real federation mark.
-    Icon(
-        painter = painterResource(R.drawable.ic_trophy),
-        contentDescription = null,
-        tint = onBase.copy(alpha = 0.85f),
-        modifier = Modifier.align(Alignment.TopEnd).padding(6.dp).size(16.dp)
-    )
-
-    // Country code stacked on the right edge.
-    Column(
-        modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        prefix.forEach { ch ->
-            Text(
-                ch.toString(),
-                color = onBase.copy(alpha = 0.30f),
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                lineHeight = 16.sp
-            )
-        }
-    }
-
-    // Flag in a yellow circle, just above the banners on the right.
-    Box(
-        modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(end = 6.dp, bottom = 30.dp)
-            .size(26.dp)
-            .clip(CircleShape)
-            .background(CardYellow),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(Teams.flag(prefix), fontSize = 14.sp)
-    }
-
-    // Bottom-left banners: code + number, then the country name.
-    Column(
-        modifier = Modifier.align(Alignment.BottomStart).padding(start = 6.dp, bottom = 6.dp, end = 6.dp),
-        verticalArrangement = Arrangement.spacedBy(2.dp)
-    ) {
-        Box(
-            Modifier.clip(RoundedCornerShape(4.dp)).background(RedBadge).padding(horizontal = 8.dp, vertical = 2.dp)
-        ) {
-            Text(
-                "$prefix $paddedNumber",
-                color = Color.White,
-                fontWeight = FontWeight.Bold,
-                fontSize = 14.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-        Box(
-            Modifier.clip(RoundedCornerShape(3.dp)).background(RedBadge.copy(alpha = 0.85f))
-                .padding(horizontal = 6.dp, vertical = 1.dp)
-        ) {
-            Text(
-                Teams.name(prefix).uppercase(),
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 8.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-        }
-    }
-
-    // ROMi logo (bottom-right) on a white pill so it reads on any base colour.
-    Box(
-        modifier = Modifier
-            .align(Alignment.BottomEnd)
-            .padding(end = 5.dp, bottom = 5.dp)
-            .clip(RoundedCornerShape(4.dp))
-            .background(Color.White)
-            .padding(horizontal = 4.dp, vertical = 2.dp)
-    ) {
+        // The ROMi card artwork (player, accent shape, ball, banners, flag balloon,
+        // vertical-code frame and ROMi logo). The team colour shows through behind it.
         Image(
-            painter = painterResource(R.drawable.ic_romi_wordmark),
+            painter = painterResource(R.drawable.sticker_card),
             contentDescription = null,
-            modifier = Modifier.height(9.dp)
+            modifier = Modifier.fillMaxSize()
         )
+
+        // Big sticker number (top-left). White with a soft shadow reads on the accent.
+        Text(
+            number,
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = (u * 0.15f).sp,
+            lineHeight = (u * 0.15f).sp,
+            style = TextStyle(shadow = numberShadow),
+            modifier = Modifier.offset(x = w * 0.05f, y = h * 0.02f)
+        )
+
+        // Flag inside the yellow balloon (centred at 89.6% x, 62.5% y).
+        Text(
+            Teams.flag(prefix),
+            fontSize = (u * 0.072f).sp,
+            modifier = Modifier
+                .offset(x = w * 0.896f, y = h * 0.625f)
+                .offset(x = -(u * 0.045f).dp, y = -(u * 0.055f).dp)
+        )
+
+        // Code + number on the red banner.
+        Text(
+            "$prefix $paddedNumber",
+            color = Color.White,
+            fontWeight = FontWeight.Bold,
+            fontSize = (u * 0.085f).sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .offset(x = w * 0.14f, y = h * 0.852f)
+                .offset(y = -(u * 0.06f).dp)
+        )
+
+        // Country name on the lower banner.
+        Text(
+            Teams.name(prefix).uppercase(),
+            color = Color.White,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = (u * 0.048f).sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier
+                .offset(x = w * 0.15f, y = h * 0.956f)
+                .offset(y = -(u * 0.035f).dp)
+        )
+
+        // Country code stacked on the right edge (matches the outlined B/R/A).
+        Column(
+            modifier = Modifier.offset(x = w * 0.785f, y = h * 0.70f),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            prefix.forEach { ch ->
+                Text(
+                    ch.toString(),
+                    color = Color.White.copy(alpha = 0.9f),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = (u * 0.075f).sp,
+                    lineHeight = (u * 0.092f).sp
+                )
+            }
+        }
     }
 }
 
